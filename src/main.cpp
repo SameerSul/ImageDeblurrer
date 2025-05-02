@@ -22,7 +22,7 @@ int main()
 {
     vector<pair<int, float>> output; 
     vector<pair<int, float>> input;
-    vector<pair<int, float>> psf; 
+    vector<pair<float, float>> psf; 
 
     // check what kind of file it is
     string fileType;

@@ -1,5 +1,6 @@
 #include "convolution.h"
-void Convolution(vector<pair<int, float>> &output, const vector<pair<int, float>> &input, vector<pair<int,float>> &psf) 
+// this is going to be block convolution, the psf matrix is gonna have to have % so we dont leak out of bounds
+void Convolution(vector<pair<int, float>> &output, vector<pair<int, float>> &input, vector<pair<float,float>> &psf) 
 {
     output.clear();
     output.resize(input.size() + psf.size() - 1, {0.0, 0.0}); 
@@ -8,10 +9,21 @@ void Convolution(vector<pair<int, float>> &output, const vector<pair<int, float>
     {
         for (int j = 0; j < psf.size(); j++)
         {
-                output[i].first += input[i].first*psf[j].first;
-                output[i].second += input[i].second*psf[j].second;
+                output[i+j].first += input[i].first*psf[j].first;
+                output[i+j].second += input[i].second*psf[j].second;
         }
     }
+
+    // remove the first and last element, and resize accordingly
+    output.erase(output.begin());
+    output.erase(output.end() - 1);
+    output.resize(input.size());
+    
+    // for (int k = 1; k < temp.size() - 1; k++)
+    // {
+    //     output[k].first = temp[k].first;
+    //     output[k].second = temp[k].second;
+    // }
 
 }
 

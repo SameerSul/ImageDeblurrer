@@ -1,5 +1,7 @@
 #include "imageComponents.h"
 
+#define PI 3.14159 // approximation for now
+
 // this is to create the vector of pairs
 using namespace std;
 
@@ -58,8 +60,25 @@ void createPixels(vector<pair<int, float>> &input)
 }
 
 
-
-void createPSF(vector<pair<int, float>> &psf) 
+// Will use a normal gaussian blur matrix to convolute our values with for now
+void createPSF(vector<pair<float, float>> &psf, int size) 
 {
-    
+    float sigma = rand() % (3 - 1 + 1) + 1;
+    psf.resize(pow(size, 2));
+    // lets stick with a 3x3 matrix for now
+    int index = 0;
+    float norm = 0.0;
+    // coordinates of matrix, so we'll have to run this in a for loop, in a really weird order since 00 is center of matrix
+    for (int y = -1; y < 2; y++)
+        for (int x = -1; x < 2; x++)
+            {
+                psf[index].first = psf[index].second = (1/(2*PI*pow(sigma, 2))) * exp(-(pow(x, 2) + pow(y, 2))/(2*pow(sigma, 2)));
+                norm += psf[index].first;
+                index++;
+            }
+    // really scuffed scalar division normalization
+
+    for (int i = 0; i < psf.size(); i++) {psf[i].first = psf[i].second = psf[i].first/norm;}
+            
+
 }
