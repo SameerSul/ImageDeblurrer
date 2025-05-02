@@ -14,50 +14,50 @@
 
 // begin restoration
 
+#include "convolution.h"
+
+using namespace std;
+
 int main()
 {
     vector<pair<int, float>> output; 
     vector<pair<int, float>> input;
-    vector<pair<int,float>> psf; 
+    vector<pair<int, float>> psf; 
 
-    // read image and turn into binary, and then process into bytes
-    ifstream image("testImage.jpg", ios::in, ios::binary);
-    ofstream binary("binaryTestImage.txt", ios::out | ios::app);
+    // check what kind of file it is
+    string fileType;
+    cout << "Sameer's Image Deblurrer" << endl;
+    cout << "Please enter the type of file you wish to deblur (i.e .ppm, .jpg, .png ...): ";
+    cin >> fileType;
 
-    // process character by character
-
-    char ch;
-
-    while (!image.eof())
+    if (fileType == ".ppm" || fileType == "ppm")
     {
-        ch = image.get();
-        binary.put(ch);
+        // read image and turn into text file
+        ifstream image("testImage.ppm", ios::in | ios::binary);
+        ofstream textOutput("testImage.txt", ios::out | ios::app);
+
+        // Skip the first three lines (header of the .ppm file)
+        string headerLine;
+        for (int i = 0; i < 3; ++i) {
+            getline(image, headerLine);
+        }
+
+        // Process character by character
+        unsigned char byte;
+        while (image.read(reinterpret_cast<char*>(&byte), 1)) {
+            textOutput << dec << static_cast<int>(byte) << " "; // Ensure decimal output
+        }
+
+        cout << "Converted image to text representation" << endl;
+
+        image.close();
+        textOutput.close();
     }
 
-    cout << "Converted image to bitstream" << endl;
-    image.close();
-    binary.close();
+    else 
+    {
+        cout << "That file type is invalid or not supported yet" << endl;
+    }
 
-    // Convert Back to Image
-
-    // ifstream binary("binaryTestImage.txt", ios::in | ios::app || ios::binary);
-    // ofstream image("testImageOutput.jpg", ios::out | ios::app);
-
-    // char ch2;
-
-    // while (!binary.eof())
-    // {
-    //     ch2 = binary.get();
-    //     image.put(ch2);
-    // }
-
-    // cout << "Converted bitstream to image" << endl;
-    // image.close();
-    // binary.close();
-
-    // Now we need to create our vector pairs array with the intensity and the rgb image data
-
-    // lets first process it in 24 bit chunks
-
-
+    return 0;
 }
