@@ -4,6 +4,7 @@
 #include <string>
 #include <bitset>
 #include <array>
+#include <cmath>
 
 using namespace std;
 
