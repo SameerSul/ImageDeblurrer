@@ -1,6 +1,8 @@
 // include wtv libraries need to be included
 #include "convolution.h"
 #include "imageComponents.h"
+#include "convolution.h"
+
 
 // steps of what needs to be done
 
@@ -16,14 +18,19 @@
 
 // begin restoration
 
-#include "convolution.h"
+
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <string>
+#include <bitset>
 
 using namespace std;
 
 int main()
 {
-    vector<pair<int, float>> output; 
-    vector<pair<int[], float>> input;
+    vector<pair<array<int, 3>, float>> input; // Use std::array<int, 3> instead of int[] because c++ loves to complain
+    vector<pair<array<int, 3>, float>> output; // Use std::array<int, 3> instead of int[]
     vector<pair<float, float>> psf;
     pair<int, int> dimensions; 
 
@@ -80,20 +87,27 @@ int main()
 
         // turn image into array and calculate intensity
         createPixels(input, width, height);
-        for (const auto& pair : input) {
-            std::cout << "(" << pair.first << ", " << pair.second << ") ";
+        // for (const auto& pair : input) {
+        //     std::cout << "(" << pair.first[0] << ", " << pair.first[1] << ", " << pair.first[2] << ", " << pair.second << ") ";
+        // }
+        cout << "created vector pair representation" << endl;
+        // std::cout << std::endl;
+        // // cout << input.size() << endl;
+        // // // create psf
+        // cout << "entering PSF" << endl;
+        createPSF(psf, 3);
+        cout << "created psf" << endl;
+        for (const auto& pair : psf) {
+            std::cout << "(" << pair.first << ") ";
         }
-        std::cout << std::endl;
-        // cout << input.size() << endl;
-        // // create psf
-        cout << "entering PSF" << endl;
-        createPSF(psf, 3); 
 
-        // // convolve psf with image
-        // Convolution(output, input, psf);
-
+        // convolve psf with image
+        Convolution(output, input, psf);
+        cout << "left convolution" << endl;
         // // return output
-        // vectorToPPM(output, "testImage.txt", dimensions.first, dimensions.second);
+        vectorToPPM(output, "finalImage.txt", dimensions.first, dimensions.second);
+
+        cout << "left vectortoppm, we done" << endl;
 
 
     }
