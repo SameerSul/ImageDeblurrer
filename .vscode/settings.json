@@ -50,6 +50,8 @@
         "xtr1common": "cpp",
         "xutility": "cpp",
         "fstream": "cpp",
-        "array": "cpp"
+        "array": "cpp",
+        "bitset": "cpp",
+        "random": "cpp"
     }
 }

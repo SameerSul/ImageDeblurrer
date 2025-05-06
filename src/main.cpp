@@ -29,12 +29,18 @@ using namespace std;
 
 int main()
 {
-    vector<pair<array<int, 3>, float>> input; // Use std::array<int, 3> instead of int[] because c++ loves to complain
-    vector<pair<array<int, 3>, float>> output; // Use std::array<int, 3> instead of int[]
+    vector<pair<array<int, 3>, float>> input;
+    vector<pair<array<int, 3>, float>> output;
     vector<pair<float, float>> psf;
+    vector<std::pair<float, float>> example_kernel = {
+        {0.0625, 0.0625}, {0.125, 0.125}, {0.0625, 0.0625},  // First row
+        {0.125, 0.125}, {0.25, 0.25}, {0.125, 0.125},        // Second row
+        {0.0625, 0.0625}, {0.125, 0.125}, {0.0625, 0.0625}   // Third row
+    };
+
     pair<int, int> dimensions; 
 
-    // check what kind of file it is
+    // Check what kind of file it is
     string fileType;
     cout << "Sameer's Image Deblurrer" << endl;
     cout << "Please enter the type of file you wish to deblur (i.e .ppm, .jpg, .png ...): ";
@@ -42,14 +48,14 @@ int main()
 
     if (fileType == ".ppm" || fileType == "ppm")
     {
-        // read image and turn into text file
+        // Read image and turn into text file
         ifstream image("testImage.ppm", ios::in | ios::binary);
         if (!image.is_open()) {
             cerr << "Error: Could not open the file 'testImage.ppm'. Please check if the file exists and the path is correct." << endl;
             return 1;
         }
 
-        ofstream textOutput("testingImage.txt", ios::out | ios::app);
+        ofstream textOutput("testingImage.txt", ios::out);  // Not appending to avoid duplicate data
         if (!textOutput.is_open()) {
             cerr << "Error: Could not open the output file 'testingImage.txt'." << endl;
             return 1;
@@ -58,10 +64,7 @@ int main()
         // Skip the first line
         string firstLine;
         getline(image, firstLine);
-        // if (firstLine != "P6" && firstLine != "P3") {
-        //     cerr << "Error: Unsupported ppm file format. Expected P6 or P3 format for .ppm files." << endl;
-        //     return 1;
-        // }
+        cout << "PPM format: " << firstLine << endl;
 
         // Read dimensions from the second line
         int width, height;
@@ -70,53 +73,77 @@ int main()
         cout << "Image dimensions: " << width << "x" << height << endl;
 
         // Skip the third line (max color value)
-        string maxColorValue;
-        getline(image, maxColorValue); // Consume the remaining newline
-        getline(image, maxColorValue);
+        int maxVal;
+        image >> maxVal;
+        cout << "Maximum color value: " << maxVal << endl;
 
-        // Process character by character
-        unsigned char byte;
-        while (image.read(reinterpret_cast<char*>(&byte), 1)) {
-            textOutput << dec << static_cast<int>(byte) << " "; // Ensure decimal output
-        }
+        // Consume the newline character after maxVal
+        image.get();
+
+        // // Process character by character for binary PPM (P6)
+        // if (firstLine == "P6") {
+        //     unsigned char byte;
+        //     while (image.read(reinterpret_cast<char*>(&byte), 1)) {
+        //         textOutput << static_cast<int>(byte) << " ";
+        //     }
+        // }
+        // Process ASCII PPM (P3)
+        // else if (firstLine == "P3") {
+            int value;
+            while (image >> value) {
+                textOutput << value << " ";
+            }
+        // }
+        // else {
+        //     cerr << "Unsupported PPM format: " << firstLine << endl;
+        //     return 1;
+        // }
 
         cout << "Converted image to text representation" << endl;
 
         image.close();
         textOutput.close();
 
-        // turn image into array and calculate intensity
+        // Turn image into array and calculate intensity
         createPixels(input, width, height);
-        // for (const auto& pair : input) {
-        //     std::cout << "(" << pair.first[0] << ", " << pair.first[1] << ", " << pair.first[2] << ", " << pair.second << ") ";
+        cout << "Created vector pair representation with " << input.size() << " pixels" << endl;
+        
+        // For Debugging sake
+        // cout << "First 5 pixels:" << endl;
+        // for (int i = 0; i < min(5, (int)input.size()); i++) {
+        //     cout << "Pixel " << i << ": RGB(" 
+        //          << input[i].first[0] << ", " 
+        //          << input[i].first[1] << ", " 
+        //          << input[i].first[2] << "), Intensity: " 
+        //          << input[i].second << endl;
         // }
-        cout << "created vector pair representation" << endl;
-        // std::cout << std::endl;
-        // // cout << input.size() << endl;
-        // // // create psf
-        // cout << "entering PSF" << endl;
-        createPSF(psf, 3);
-        cout << "created psf" << endl;
-        for (const auto& pair : psf) {
-            std::cout << "(" << pair.first << ") ";
-        }
+        
+        // printKernel(example_kernel);
+        createPSF(psf,2500);
 
-        // convolve psf with image
+        // Convolve psf with image
         Convolution(output, input, psf);
-        cout << "left convolution" << endl;
-        // // return output
-        vectorToPPM(output, "finalImage.txt", dimensions.first, dimensions.second);
+        cout << "Convolution completed" << endl;
+        
+        // More debugging
+        // cout << "First 5 output pixels:" << endl;
+        // for (int i = 0; i < min(5, (int)output.size()); i++) {
+        //     cout << "Pixel " << i << ": RGB(" 
+        //          << output[i].first[0] << ", " 
+        //          << output[i].first[1] << ", " 
+        //          << output[i].first[2] << "), Intensity: " 
+        //          << output[i].second << endl;
+        // }
 
-        cout << "left vectortoppm, we done" << endl;
+        // Convert back to PPM
+        vectorToPPM(output, "output.ppm", dimensions.first, dimensions.second);
 
-
+        cout << "Image processing completed successfully" << endl;
     }
-
     else 
     {
         cout << "That file type is invalid or not supported yet" << endl;
     }
-
 
     return 0;
 }

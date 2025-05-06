@@ -1,6 +1,6 @@
 #include "imageComponents.h"
 
-#define PI 3.14159 // approximation for now
+#define M_PI 3.14159 // approximation for now
 
 using namespace std;
 
@@ -56,23 +56,28 @@ void createPSF(vector<pair<float, float>> &psf, int size)
 {
     cout << "PSF entered" << endl;
 
-    float sigma = rand() % (3 - 1 + 1) + 1;
-    psf.resize(pow(size, 2));
+    float sigma = 10.0f; // removed random bc i want fixed results for debugging and it doesn't really matter too much
+    psf.resize(size * size);
+    int halfSize = size / 2;
+    
+    float sum = 0.0f;
     int index = 0;
-    float norm = 0.0;
 
     // Generate Gaussian kernel
-    for (int y = -1; y < 2; y++) {
-        for (int x = -1; x < 2; x++) {
-            psf[index].first = psf[index].second = (1 / (2 * PI * pow(sigma, 2))) * exp(-(pow(x, 2) + pow(y, 2)) / (2 * pow(sigma, 2)));
-            norm += psf[index].first;
+    for (int y = -halfSize; y <= halfSize; y++) {
+        for (int x = -halfSize; x <= halfSize; x++) {
+            float value = (1.0f / (2.0f * M_PI * sigma * sigma)) * 
+                          exp(-(x*x + y*y) / (2.0f * sigma * sigma));
+            
+            psf[index].first = psf[index].second = value;
+            sum += value;
             index++;
         }
     }
 
-    // Normalize the kernel with this scuffed ahh method
+    // Normalize the kernel
     for (int i = 0; i < psf.size(); i++) {
-        psf[i].first = psf[i].second = psf[i].first / norm;
+        psf[i].first = psf[i].second = psf[i].first / sum;
     }
 
     cout << "PSF left" << endl;
@@ -81,7 +86,7 @@ void createPSF(vector<pair<float, float>> &psf, int size)
 void vectorToPPM(vector<pair<array<int, 3>, float>> &output, const string &outputFilename, int width, int height)
 {
     cout << "entered vectortoppm" << endl;
-    ofstream outputFile(outputFilename, ios::out | ios::binary);
+    ofstream outputFile(outputFilename); // Text mode for P3 format
 
     if (!outputFile) {
         cerr << "Error: Could not open output file " << outputFilename << endl;
@@ -89,19 +94,42 @@ void vectorToPPM(vector<pair<array<int, 3>, float>> &output, const string &outpu
     }
 
     // Write PPM header
-    outputFile << "P3" << endl;              // ASCII PPM format
-    outputFile << width << " " << height << endl; // Width and height
-    outputFile << "255" << endl;            // Max color value
+    outputFile << "P3" << endl;
+    outputFile << width << " " << height << endl;
+    outputFile << "255" << endl;
 
     // Write pixel data
     for (const auto &pixel : output) {
-        unsigned char r = pixel.first[0];
-        unsigned char g = pixel.first[1];
-        unsigned char b = pixel.first[2];
+        // Clamp values to 0-255 range
+        int r = max(0, min(255, pixel.first[0]));
+        int g = max(0, min(255, pixel.first[1]));
+        int b = max(0, min(255, pixel.first[2]));
 
-        outputFile << static_cast<int>(r) << " " << static_cast<int>(g) << " " << static_cast<int>(b) << " ";
+        outputFile << r << " " << g << " " << b << " ";
     }
 
     outputFile.close();
     cout << "Saved image as " << outputFilename << endl;
+}
+// Add this function to help debug your kernel
+void printKernel(const vector<pair<float, float>> &kernel) {
+    int size = static_cast<int>(sqrt(kernel.size()));
+    cout << "Kernel size: " << size << "x" << size << endl;
+    
+    // Print kernel values
+    cout << "Kernel values:" << endl;
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            int index = y * size + x;
+            cout << kernel[index].first << "\t";
+        }
+        cout << endl;
+    }
+    
+    // Verify kernel sum (should be very close to 1.0 for a normalized kernel)
+    float sum = 0.0f;
+    for (const auto &k : kernel) {
+        sum += k.first;
+    }
+    cout << "Kernel sum: " << sum << " (should be close to 1.0)" << endl;
 }
