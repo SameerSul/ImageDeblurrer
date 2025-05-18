@@ -38,6 +38,7 @@ int main()
         {0.0625, 0.0625}, {0.125, 0.125}, {0.0625, 0.0625}   // Third row
     };
 
+    int kernel_size = 3;
     pair<int, int> dimensions; 
 
     // Check what kind of file it is
@@ -119,10 +120,12 @@ int main()
         // }
         
         // printKernel(example_kernel);
-        createPSF(psf,2500);
+        createPSF(psf,kernel_size);
 
+        cout << "Convolution started" << endl;
         // Convolve psf with image
-        Convolution(output, input, psf);
+        // Convolution(output, input, psf);
+        gaussianBlurring(output, input, psf, width, height, kernel_size);
         cout << "Convolution completed" << endl;
         
         // More debugging

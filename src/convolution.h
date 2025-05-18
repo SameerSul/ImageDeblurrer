@@ -9,3 +9,7 @@
 using namespace std;
 
 void Convolution(vector<pair<array<int, 3>, float>> &output, vector<pair<array<int, 3>, float>> &input, vector<pair<float,float>> &psf); 
+
+void gaussianBlurring(vector<pair<array<int, 3>, float>> &output, 
+    vector<pair<array<int, 3>, float>> &input, 
+    vector<pair<float, float>> &psf, int width, int height, int kernel_size);
