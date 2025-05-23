@@ -32,13 +32,8 @@ int main()
     vector<pair<array<int, 3>, float>> input;
     vector<pair<array<int, 3>, float>> output;
     vector<pair<float, float>> psf;
-    vector<std::pair<float, float>> example_kernel = {
-        {0.0625, 0.0625}, {0.125, 0.125}, {0.0625, 0.0625},  // First row
-        {0.125, 0.125}, {0.25, 0.25}, {0.125, 0.125},        // Second row
-        {0.0625, 0.0625}, {0.125, 0.125}, {0.0625, 0.0625}   // Third row
-    };
 
-    int kernel_size = 3;
+    int kernel_size = 20;
     pair<int, int> dimensions; 
 
     // Check what kind of file it is
@@ -119,16 +114,18 @@ int main()
         //          << input[i].second << endl;
         // }
         
-        // printKernel(example_kernel);
+
         createPSF(psf,kernel_size);
+        // printKernel(psf);
 
         cout << "Convolution started" << endl;
         // Convolve psf with image
         // Convolution(output, input, psf);
         gaussianBlurring(output, input, psf, width, height, kernel_size);
         cout << "Convolution completed" << endl;
-        
-        // More debugging
+
+        // DEBUGGING - Double checking to ensure gaussian blurring was being done right and not in word boxes
+        // checkGaussianBlurSetup(input, output, psf, width, height, kernel_size);
         // cout << "First 5 output pixels:" << endl;
         // for (int i = 0; i < min(5, (int)output.size()); i++) {
         //     cout << "Pixel " << i << ": RGB(" 

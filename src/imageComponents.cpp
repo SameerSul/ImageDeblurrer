@@ -55,81 +55,120 @@ void createPixels(vector<pair<array<int, 3>, float>> &input, int width, int heig
 void createPSF(vector<pair<float, float>> &psf, int size)
 {
     cout << "PSF entered" << endl;
-
-    float sigma = 10.0f; // removed random bc i want fixed results for debugging and it doesn't really matter too much
+    
+    // Adjust sigma based on kernel size
+    float sigma = (size - 1) / 6.0f;
+    if (sigma < 1.0f) sigma = 1.0f;
+    
     psf.resize(size * size);
     int halfSize = size / 2;
     
     float sum = 0.0f;
     int index = 0;
 
+    cout << "Starting kernel generation, size: " << size << endl;
+
     // Generate Gaussian kernel
-    for (int y = -halfSize; y <= halfSize; y++) {
-        for (int x = -halfSize; x <= halfSize; x++) {
-            float value = (1.0f / (2.0f * M_PI * sigma * sigma)) * 
-                          exp(-(x*x + y*y) / (2.0f * sigma * sigma));
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
             
-            psf[index].first = psf[index].second = value;
+            // Convert to centered coordinates because some even numbers were causing problems
+            int centered_x = x - halfSize;
+            int centered_y = y - halfSize;
+            
+            float value = (1.0f / (2.0f * M_PI * sigma * sigma)) * 
+                          exp(-(centered_x*centered_x + centered_y*centered_y) / (2.0f * sigma * sigma));
+            
+            if (index < 5) cout << "Index " << index << ": value = " << value << endl;
+            
+            psf[index].first = value;
+            psf[index].second = value;
+            
             sum += value;
             index++;
         }
     }
 
+    cout << "Sum before normalization: " << sum << endl;
+    
+    // DEBUGGING - Check first few values before normalization
+    // for (int i = 0; i < min(5, (int)psf.size()); i++) {
+    //     cout << "Before norm - psf[" << i << "].first = " << psf[i].first << endl;
+    // }
+
     // Normalize the kernel
     for (int i = 0; i < psf.size(); i++) {
-        psf[i].first = psf[i].second = psf[i].first / sum;
+        psf[i].first = psf[i].first / sum;
+        psf[i].second = psf[i].second / sum;
     }
+    
+    // DEBUGGING - Check first few values after normalization  
+    // for (int i = 0; i < min(5, (int)psf.size()); i++) {
+    //     cout << "After norm - psf[" << i << "].first = " << psf[i].first << endl;
+    // }
 
     cout << "PSF left" << endl;
 }
 
-void vectorToPPM(vector<pair<array<int, 3>, float>> &output, const string &outputFilename, int width, int height)
-{
-    cout << "entered vectortoppm" << endl;
-    ofstream outputFile(outputFilename); // Text mode for P3 format
-
-    if (!outputFile) {
-        cerr << "Error: Could not open output file " << outputFilename << endl;
-        return;
-    }
-
-    // Write PPM header
-    outputFile << "P3" << endl;
-    outputFile << width << " " << height << endl;
-    outputFile << "255" << endl;
-
-    // Write pixel data
-    for (const auto &pixel : output) {
-        // Clamp values to 0-255 range
-        int r = max(0, min(255, pixel.first[0]));
-        int g = max(0, min(255, pixel.first[1]));
-        int b = max(0, min(255, pixel.first[2]));
-
-        outputFile << r << " " << g << " " << b << " ";
-    }
-
-    outputFile.close();
-    cout << "Saved image as " << outputFilename << endl;
-}
-// Add this function to help debug your kernel
-void printKernel(const vector<pair<float, float>> &kernel) {
-    int size = static_cast<int>(sqrt(kernel.size()));
-    cout << "Kernel size: " << size << "x" << size << endl;
+void vectorToPPM(vector<pair<array<int, 3>, float>>& data, const string& filename, int width, int height) {
+    ofstream file(filename);
+    file << "P3\n" << width << " " << height << "\n255\n";
     
-    // Print kernel values
-    cout << "Kernel values:" << endl;
-    for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
-            int index = y * size + x;
-            cout << kernel[index].first << "\t";
-        }
-        cout << endl;
+    for (const auto& pixel : data) {
+        file << pixel.first[0] << " " 
+             << pixel.first[1] << " " 
+             << pixel.first[2] << " ";
     }
-    
-    // Verify kernel sum (should be very close to 1.0 for a normalized kernel)
-    float sum = 0.0f;
-    for (const auto &k : kernel) {
-        sum += k.first;
-    }
-    cout << "Kernel sum: " << sum << " (should be close to 1.0)" << endl;
+    file.close();
 }
+
+// DEBUGGING - Making sure that PSF has center pixel as highest value
+// void printKernel(const vector<pair<float, float>> &kernel) {
+//     cout << "printKernel entered" << endl;
+    
+//     cout << "Kernel vector size: " << kernel.size() << endl;
+    
+//     if (kernel.empty()) {
+//         cout << "Error: Kernel is empty!" << endl;
+//         return;
+//     }
+    
+//     int size = static_cast<int>(sqrt(kernel.size()));
+//     cout << "Calculated kernel size: " << size << "x" << size << endl;
+    
+//     // Check if it's a perfect square
+//     if (size * size != kernel.size()) {
+//         cout << "Warning: Kernel size is not a perfect square! Expected " << size*size << ", got " << kernel.size() << endl;
+//     }
+    
+//     cout << "About to print kernel values..." << endl;
+    
+//     // Print kernel values
+//     cout << "Kernel values:" << endl;
+//     for (int y = 0; y < size; y++) {
+//         cout << "Row " << y << ": ";
+//         for (int x = 0; x < size; x++) {
+//             int index = y * size + x;
+//             if (index >= kernel.size()) {
+//                 cout << "INDEX_ERROR ";
+//                 break;
+//             }
+//             cout << kernel[index].first << "\t";
+//         }
+//         cout << endl;
+//     }
+    
+//     cout << "Calculating sum..." << endl;
+    
+//     // Verify kernel sum
+//     float sum = 0.0f;
+//     for (int i = 0; i < kernel.size(); i++) {
+//         sum += kernel[i].first;
+//         if (i < 5) { // Debug first few values
+//             cout << "kernel[" << i << "].first = " << kernel[i].first << endl;
+//         }
+//     }
+//     cout << "Kernel sum: " << sum << " (should be close to 1.0)" << endl;
+    
+//     cout << "printKernel finished" << endl;
+// }
