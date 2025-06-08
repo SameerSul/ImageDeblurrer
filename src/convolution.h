@@ -5,6 +5,10 @@
 #include <bitset>
 #include <array>
 #include <cmath>
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+
 
 using namespace std;
 
@@ -13,6 +17,13 @@ void Convolution(vector<pair<array<int, 3>, float>> &output, vector<pair<array<i
 void gaussianBlurring(vector<pair<array<int, 3>, float>> &output, 
     vector<pair<array<int, 3>, float>> &input, 
     vector<pair<float, float>> &psf, int width, int height, int kernel_size);
+
+
+void lucyRichardsonDeblurring(vector<pair<array<int, 3>, float>> &output, 
+    vector<pair<array<int, 3>, float>> &input, 
+    vector<pair<float, float>> &psf, int width, int height, int kernel_size);
+
+
 bool checkGaussianBlurSetup(
         const vector<pair<array<int, 3>, float>> &input,
         const vector<pair<array<int, 3>, float>> &output,

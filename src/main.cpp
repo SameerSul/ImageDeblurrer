@@ -30,7 +30,9 @@ using namespace std;
 int main()
 {
     vector<pair<array<int, 3>, float>> input;
-    vector<pair<array<int, 3>, float>> output;
+    vector<pair<array<int, 3>, float>> blurredOutput;
+    vector<pair<array<int, 3>, float>> unblurredOutput;
+
     vector<pair<float, float>> psf;
 
     int kernel_size = 20;
@@ -121,8 +123,8 @@ int main()
         cout << "Convolution started" << endl;
         // Convolve psf with image
         // Convolution(output, input, psf);
-        gaussianBlurring(output, input, psf, width, height, kernel_size);
-        cout << "Convolution completed" << endl;
+        gaussianBlurring(blurredOutput, input, psf, width, height, kernel_size);
+        cout << "Blurring Convolution completed" << endl;
 
         // DEBUGGING - Double checking to ensure gaussian blurring was being done right and not in word boxes
         // checkGaussianBlurSetup(input, output, psf, width, height, kernel_size);
@@ -136,9 +138,20 @@ int main()
         // }
 
         // Convert back to PPM
-        vectorToPPM(output, "output.ppm", dimensions.first, dimensions.second);
+        vectorToPPM(blurredOutput, "blurredOutput.ppm", dimensions.first, dimensions.second);
 
-        cout << "Image processing completed successfully" << endl;
+        cout << "Blurred Image processing completed successfully" << endl;
+
+        lucyRichardsonDeblurring(unblurredOutput, blurredOutput, psf, width, height, kernel_size);
+        cout << "Deblurring Convolution completed" << endl;
+
+        vectorToPPM(unblurredOutput, "unblurredOutput.ppm", dimensions.first, dimensions.second);
+
+
+
+
+
+
     }
     else 
     {

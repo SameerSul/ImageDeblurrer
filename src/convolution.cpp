@@ -158,7 +158,7 @@ void gaussianBlurring(vector<pair<array<int, 3>, float>> &output,
         // Check for invalid accumulated values
         if (isnan(new_r) || isinf(new_r) || isnan(new_g) || isinf(new_g) || isnan(new_b) || isinf(new_b)) {
             cout << "Warning: Invalid color values at pixel " << i << endl;
-            // Copy original values as fallback
+            // Copy original values instead
             output[i].first[0] = input[i].first[0];
             output[i].first[1] = input[i].first[1];
             output[i].first[2] = input[i].first[2];
@@ -175,6 +175,197 @@ void gaussianBlurring(vector<pair<array<int, 3>, float>> &output,
     cout << "Output Assigned - Processed " << input.size() << " pixels" << endl;
 }
 
+
+void lucyRichardsonDeblurring(vector<pair<array<int, 3>, float>> &output, 
+    vector<pair<array<int, 3>, float>> &input, 
+    vector<pair<float, float>> &psf, int width, int height, int kernel_size) {
+    
+    cout << "Starting Lucy-Richardson deblurring..." << endl;
+    cout << "Image dimensions: " << width << "x" << height << endl;
+    cout << "Kernel size: " << kernel_size << "x" << kernel_size << endl;
+    cout << "Input pixels: " << input.size() << endl;
+    
+    const int iterations = 40; // Number of Lucy-Richardson iterations
+    const float epsilon = 1e-8f; // Small value to prevent division by zero
+    
+    // Ensure output has correct size
+    output.resize(input.size());
+    
+    // Work with intensity values for deblurring, then scale RGB accordingly
+    vector<vector<float>> image_intensity(height, vector<float>(width, 0.0f));
+    vector<vector<float>> estimate_intensity(height, vector<float>(width, 0.0f));
+    vector<vector<float>> blurred(height, vector<float>(width, 0.0f));
+    vector<vector<float>> ratio(height, vector<float>(width, 0.0f));
+    vector<vector<float>> correction(height, vector<float>(width, 0.0f));
+    
+    // Store original RGB values for final reconstruction
+    vector<vector<array<int, 3>>> original_rgb(height, vector<array<int, 3>>(width, {0, 0, 0}));
+    
+    // Convert input to dense format using proper indexing
+    cout << "Converting input to dense format..." << endl;
+    for (int i = 0; i < input.size(); i++) {
+        int y = i / width;
+        int x = i % width;
+        
+        if (y < height && x < width) {
+            // Store intensity for deblurring
+            image_intensity[y][x] = input[i].second;
+            estimate_intensity[y][x] = input[i].second; // Initial estimate
+            
+            // Store original RGB values
+            original_rgb[y][x] = input[i].first;
+        }
+    }
+    
+    // Convert PSF to 2D kernel
+    cout << "Building PSF kernel..." << endl;
+    vector<vector<float>> kernel(kernel_size, vector<float>(kernel_size, 0.0f));
+    int center = kernel_size / 2;
+    
+    // Convert linear PSF array to 2D kernel
+    for (int y = 0; y < kernel_size; y++) {
+        for (int x = 0; x < kernel_size; x++) {
+            int psf_index = y * kernel_size + x;
+            if (psf_index < psf.size()) {
+                kernel[y][x] = psf[psf_index].first;
+            }
+        }
+    }
+    
+    // Verify kernel normalization
+    float kernel_sum = 0.0f;
+    for (int i = 0; i < kernel_size; i++) {
+        for (int j = 0; j < kernel_size; j++) {
+            kernel_sum += kernel[i][j];
+        }
+    }
+    cout << "Kernel sum: " << kernel_sum << endl;
+    
+    // Create flipped kernel for correlation
+    vector<vector<float>> flipped_kernel(kernel_size, vector<float>(kernel_size));
+    for (int i = 0; i < kernel_size; i++) {
+        for (int j = 0; j < kernel_size; j++) {
+            flipped_kernel[i][j] = kernel[kernel_size - 1 - i][kernel_size - 1 - j];
+        }
+    }
+    
+    // Lucy-Richardson iterations
+    cout << "Starting " << iterations << " iterations..." << endl;
+    for (int iter = 0; iter < iterations; iter++) {
+        if (iter % 3 == 0) {
+            cout << "  Iteration " << (iter + 1) << "/" << iterations << endl;
+        }
+        
+        // Step 1: Convolve current estimate with PSF
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                float sum = 0.0f;
+                for (int ky = 0; ky < kernel_size; ky++) {
+                    for (int kx = 0; kx < kernel_size; kx++) {
+                        int py = y + ky - center;
+                        int px = x + kx - center;
+                        
+                        // Handle boundaries with mirroring
+                        if (py < 0) py = -py;
+                        if (py >= height) py = 2 * height - py - 2;
+                        if (px < 0) px = -px;
+                        if (px >= width) px = 2 * width - px - 2;
+                        
+                        // Clamp to valid range (fallback)
+                        py = max(0, min(height - 1, py));
+                        px = max(0, min(width - 1, px));
+                        
+                        sum += estimate_intensity[py][px] * kernel[ky][kx];
+                    }
+                }
+                blurred[y][x] = sum;
+            }
+        }
+        
+        // Step 2: Calculate ratio of observed to blurred
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (blurred[y][x] > epsilon) {
+                    ratio[y][x] = image_intensity[y][x] / blurred[y][x];
+                } else {
+                    ratio[y][x] = 1.0f;
+                }
+            }
+        }
+        
+        // Step 3: Correlate ratio with flipped PSF
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                float sum = 0.0f;
+                for (int ky = 0; ky < kernel_size; ky++) {
+                    for (int kx = 0; kx < kernel_size; kx++) {
+                        int py = y + ky - center;
+                        int px = x + kx - center;
+                        
+                        // Handle boundaries with mirroring
+                        if (py < 0) py = -py;
+                        if (py >= height) py = 2 * height - py - 2;
+                        if (px < 0) px = -px;
+                        if (px >= width) px = 2 * width - px - 2;
+                        
+                        // Clamp to valid range (fallback)
+                        py = max(0, min(height - 1, py));
+                        px = max(0, min(width - 1, px));
+                        
+                        sum += ratio[py][px] * flipped_kernel[ky][kx];
+                    }
+                }
+                correction[y][x] = sum;
+            }
+        }
+        
+        // Step 4: Update estimate
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                estimate_intensity[y][x] *= correction[y][x];
+                // Prevent negative values
+                if (estimate_intensity[y][x] < 0) {
+                    estimate_intensity[y][x] = 0.0f;
+                }
+                // Prevent excessive brightness
+                if (estimate_intensity[y][x] > 255.0f) {
+                    estimate_intensity[y][x] = 255.0f;
+                }
+            }
+        }
+    }
+    
+    // Convert result back to your format
+    cout << "Converting result back to output format..." << endl;
+    for (int i = 0; i < input.size(); i++) {
+        int y = i / width;
+        int x = i % width;
+        
+        if (y < height && x < width) {
+            float intensity_ratio = 1.0f;
+            
+            // Calculate intensity scaling ratio (avoid division by zero)
+            if (input[i].second > epsilon) {
+                intensity_ratio = estimate_intensity[y][x] / input[i].second;
+                // Clamp the ratio to reasonable bounds
+                intensity_ratio = max(0.1f, min(4.0f, intensity_ratio));
+            }
+            
+            // Scale RGB values proportionally to intensity change
+            output[i].first[0] = static_cast<int>(min(255.0f, max(0.0f, original_rgb[y][x][0] * intensity_ratio)));
+            output[i].first[1] = static_cast<int>(min(255.0f, max(0.0f, original_rgb[y][x][1] * intensity_ratio)));
+            output[i].first[2] = static_cast<int>(min(255.0f, max(0.0f, original_rgb[y][x][2] * intensity_ratio)));
+            
+            // Update intensity
+            output[i].second = estimate_intensity[y][x];
+        } else {
+            // Fallback: copy original values
+            output[i] = input[i];
+        }
+    }
+    
+    cout << "Lucy-Richardson deblurring completed!" << endl;
+}
 // DEBUGGING
 // bool checkGaussianBlurSetup(
 //     const vector<pair<array<int, 3>, float>> &input,
